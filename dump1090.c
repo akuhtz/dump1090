@@ -82,6 +82,7 @@
 #define MODES_INTERACTIVE_TTL 60                /* TTL before being removed */
 
 #define MODES_NET_MAX_FD 1024
+#define MODES_NET_OUTPUT_BAKED_PORT 30004
 #define MODES_NET_OUTPUT_SBS_PORT 30003
 #define MODES_NET_OUTPUT_RAW_PORT 30002
 #define MODES_NET_INPUT_RAW_PORT 30001
@@ -108,6 +109,7 @@ struct aircraft {
     int speed;          /* Velocity computed from EW and NS components. */
     int track;          /* Angle of flight. */
     time_t seen;        /* Time at which the last packet was received. */
+    time_t emitted;        /* Time at which the aircraft info was last emitted. */
     long messages;      /* Number of Mode S messages received. */
     /* Encoded latitude and longitude as extracted by odd and even
      * CPR encoded messages. */
@@ -146,6 +148,7 @@ struct {
     char aneterr[ANET_ERR_LEN];
     struct client *clients[MODES_NET_MAX_FD]; /* Our clients. */
     int maxfd;                      /* Greatest fd currently active. */
+    int bakedos;                   /* baked output listening socket. */
     int sbsos;                      /* SBS output listening socket. */
     int ros;                        /* Raw output listening socket. */
     int ris;                        /* Raw input listening socket. */
@@ -159,6 +162,7 @@ struct {
     int debug;                      /* Debugging mode. */
     int net;                        /* Enable networking. */
     int net_only;                   /* Enable just networking. */
+    int net_output_baked_port;      /* baked output TCP port. */
     int net_output_sbs_port;        /* SBS output TCP port. */
     int net_output_raw_port;        /* Raw output TCP port. */
     int net_input_raw_port;         /* Raw input TCP port. */
@@ -185,6 +189,7 @@ struct {
     long long stat_two_bits_fix;
     long long stat_http_requests;
     long long stat_sbs_connections;
+    long long stat_baked_connections;
     long long stat_out_of_phase;
 } Modes;
 
@@ -267,6 +272,7 @@ void modesInitConfig(void) {
     Modes.raw = 0;
     Modes.net = 0;
     Modes.net_only = 0;
+    Modes.net_output_baked_port = MODES_NET_OUTPUT_BAKED_PORT;
     Modes.net_output_sbs_port = MODES_NET_OUTPUT_SBS_PORT;
     Modes.net_output_raw_port = MODES_NET_OUTPUT_RAW_PORT;
     Modes.net_input_raw_port = MODES_NET_INPUT_RAW_PORT;
@@ -328,6 +334,7 @@ void modesInit(void) {
     Modes.stat_two_bits_fix = 0;
     Modes.stat_http_requests = 0;
     Modes.stat_sbs_connections = 0;
+    Modes.stat_baked_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
 }
@@ -1895,18 +1902,19 @@ void modesInitNet(void) {
         char *descr;
         int *socket;
         int port;
-    } services[4] = {
+    } services[5] = {
         {"Raw TCP output", &Modes.ros, Modes.net_output_raw_port},
         {"Raw TCP input", &Modes.ris, Modes.net_input_raw_port},
         {"HTTP server", &Modes.https, Modes.net_http_port},
-        {"Basestation TCP output", &Modes.sbsos, Modes.net_output_sbs_port}
+        {"Basestation TCP output", &Modes.sbsos, Modes.net_output_sbs_port},
+        {"Baked TCP output", &Modes.bakedos, Modes.net_output_baked_port}
     };
     int j;
 
     memset(Modes.clients,0,sizeof(Modes.clients));
     Modes.maxfd = -1;
 
-    for (j = 0; j < 4; j++) {
+    for (j = 0; j < 5; j++) {
         int s = anetTcpServer(Modes.aneterr, services[j].port, NULL);
         if (s == -1) {
             fprintf(stderr, "Error opening the listening port %d (%s): %s\n",
@@ -1927,12 +1935,13 @@ void modesAcceptClients(void) {
     int fd, port;
     unsigned int j;
     struct client *c;
-    int services[4];
+    int services[5];
 
     services[0] = Modes.ros;
     services[1] = Modes.ris;
     services[2] = Modes.https;
     services[3] = Modes.sbsos;
+    services[4] = Modes.bakedos;
 
     for (j = 0; j < sizeof(services)/sizeof(int); j++) {
         fd = anetTcpAccept(Modes.aneterr, services[j], NULL, &port);
@@ -1953,6 +1962,7 @@ void modesAcceptClients(void) {
 
         if (Modes.maxfd < fd) Modes.maxfd = fd;
         if (services[j] == Modes.sbsos) Modes.stat_sbs_connections++;
+        if (services[j] == Modes.bakedos) Modes.stat_baked_connections++;
 
         j--; /* Try again with the same listening port. */
 
@@ -2353,6 +2363,66 @@ void modesReadFromClients(void) {
     }
 }
 
+void showFlightsTSV(void) {
+    struct aircraft *a = Modes.aircrafts;
+    time_t now = time(NULL);
+    int age, emittedSecondsAgo;
+    static time_t lastTime = 0;
+
+    if (Modes.stat_baked_connections == 0) {
+        return;
+    }
+
+    if (now - lastTime < 5) {
+        return;
+    }
+
+    for(a = Modes.aircrafts; a; a = a->next) {
+	char msg[1024], *p = msg;
+
+	age = (int)(now - a->seen);
+	emittedSecondsAgo = (int)(now - a->emitted);
+
+	// don't emit if it hasn't updated since last time
+	if (age > emittedSecondsAgo) {
+	    continue;
+	}
+
+	// don't emit more than once every five seconds
+	if (emittedSecondsAgo < 5) {
+	    continue;
+	}
+
+	// enable if you want only ads-b
+	if (a->lat == 0 && a->lon == 0) {
+	    continue;
+	}
+
+	p += sprintf(p, "clock\t%ld\thexid\t%06X", a->seen, a->addr);
+
+	if (*a->flight != '\0') {
+	    p += sprintf(p, "\tident\t%-8s", a->flight);
+	}
+
+	p += sprintf(p, "\talt\t%-9d", a->altitude);
+
+        if (a->lat != 0 || a->lon != 0) {
+	    p += sprintf(p, "\tspeed\t%-7d\tlat\t%-7.03f\tlon\t%-7.03f\theading\t%-3d",
+		a->speed, a->lat, a->lon, a->track);
+	}
+
+	p += sprintf(p, "\n");
+
+	a->emitted = now;
+
+	modesSendAllClients(Modes.bakedos, msg, p-msg);
+    }
+
+    lastTime = now;
+}
+
+/* When in interactive mode If we don't receive new nessages within */
+
 /* ================================ Main ==================================== */
 
 void showHelp(void) {
@@ -2400,6 +2470,7 @@ void backgroundTasks(void) {
         modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
+	showFlightsTSV();
     }
 
     /* Refresh screen when in interactive mode. */
