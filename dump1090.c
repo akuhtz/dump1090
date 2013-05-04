@@ -2386,7 +2386,7 @@ void showFlightsTSV(void) {
         return;
     }
 
-    if (now - lastTime < 5) {
+    if (now - lastTime < 2) {
         return;
     }
 
@@ -2462,6 +2462,7 @@ void showHelp(void) {
 "--net                    Enable networking.\n"
 "--net-only               Enable just networking, no RTL device or file used.\n"
 "--net-ro-port <port>     TCP listening port for raw output (default: 30002).\n"
+"--net-baked-port <port>     TCP listening port for baked (key-value tsv) output (default: 30004).\n"
 "--net-ri-port <port>     TCP listening port for raw input (default: 30001).\n"
 "--net-http-port <port>   HTTP server port (default: 8080).\n"
 "--net-sbs-port <port>    TCP listening port for BaseStation format output (default: 30003).\n"
@@ -2540,6 +2541,8 @@ int main(int argc, char **argv) {
             Modes.net_only = 1;
         } else if (!strcmp(argv[j],"--net-ro-port") && more) {
             Modes.net_output_raw_port = atoi(argv[++j]);
+        } else if (!strcmp(argv[j],"--net-baked-port") && more) {
+            Modes.net_output_baked_port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-ri-port") && more) {
             Modes.net_input_raw_port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-http-port") && more) {
