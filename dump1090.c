@@ -110,6 +110,8 @@ struct aircraft {
     int track;          /* Angle of flight. */
     time_t seen;        /* Time at which the last packet was received. */
     time_t emitted;        /* Time at which the aircraft info was last emitted. */
+    int squawk;               /* 13 bits identity (Squawk). */
+    int ground;
     long messages;      /* Number of Mode S messages received. */
     /* Encoded latitude and longitude as extracted by odd and even
      * CPR encoded messages. */
@@ -1592,6 +1594,8 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     a->lon = 0;
     a->seen = time(NULL);
     a->messages = 0;
+    a->squawk = 0;
+    a->ground = -1;
     a->next = NULL;
     return a;
 }
@@ -1772,6 +1776,15 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
 
     a->seen = time(NULL);
     a->messages++;
+
+    a->ground = 0;
+
+    if (mm->msgtype == 4 || mm->msgtype == 5 || mm->msgtype == 21) {
+        a->squawk = mm->identity;
+        if (mm->fs == 1 || mm->fs == 3) {
+	    a->ground = 1;
+	}
+    }
 
     if (mm->msgtype == 0 || mm->msgtype == 4 || mm->msgtype == 20) {
         a->altitude = mm->altitude;
@@ -2394,7 +2407,7 @@ void showFlightsTSV(void) {
 	}
 
 	// enable if you want only ads-b
-	if (a->lat == 0 && a->lon == 0) {
+	if (0 && a->lat == 0 && a->lon == 0) {
 	    continue;
 	}
 
@@ -2404,7 +2417,17 @@ void showFlightsTSV(void) {
 	    p += sprintf(p, "\tident\t%-8s", a->flight);
 	}
 
+	if (a->squawk != 0) {
+	    p += sprintf(p, "\tsquawk\t%04d", a->squawk);
+	}
+
 	p += sprintf(p, "\talt\t%-9d", a->altitude);
+
+	if (a->ground == 1) {
+	    p += sprintf(p, "\tairGround\tG");
+	} else if (a->ground == 0) {
+	    p += sprintf(p, "\tairGround\tA");
+	}
 
         if (a->lat != 0 || a->lon != 0) {
 	    p += sprintf(p, "\tspeed\t%-7d\tlat\t%-7.03f\tlon\t%-7.03f\theading\t%-3d",
