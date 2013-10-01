@@ -98,6 +98,7 @@ struct client {
     int service;    /* TCP port the client is connected to. */
     char buf[MODES_CLIENT_BUF_SIZE+1];    /* Read buffer. */
     int buflen;                         /* Amount of data on buffer. */
+    char verbatim[MODES_CLIENT_BUF_SIZE+1];   /* data to be quoted in baked output */
 };
 
 /* Structure used to describe an aircraft in iteractive mode. */
@@ -121,6 +122,7 @@ struct aircraft {
     int even_cprlon;
     double lat, lon;    /* Coordinated obtained from CPR encoded data. */
     long long odd_cprtime, even_cprtime;
+    struct client *client; /* client that was the last source for this */
     struct aircraft *next; /* Next aircraft in our linked list. */
 };
 
@@ -241,10 +243,10 @@ struct modesMessage {
 };
 
 void interactiveShowData(void);
-struct aircraft* interactiveReceiveData(struct modesMessage *mm);
+struct aircraft* interactiveReceiveData(struct modesMessage *mm, struct client *c);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
-void useModesMessage(struct modesMessage *mm);
+void useModesMessage(struct modesMessage *mm, struct client *c);
 int fixSingleBitErrors(unsigned char *msg, int bits);
 int fixTwoBitsErrors(unsigned char *msg, int bits);
 int modesMessageLenByType(int type);
@@ -1526,7 +1528,7 @@ good_preamble:
             }
 
             /* Pass data to the next layer */
-            useModesMessage(&mm);
+            useModesMessage(&mm,NULL);
         } else {
             if (Modes.debug & MODES_DEBUG_DEMODERR && use_correction) {
                 printf("The following message has %d demod errors\n", errors);
@@ -1551,12 +1553,12 @@ good_preamble:
  *
  * Basically this function passes a raw message to the upper layers for
  * further processing and visualization. */
-void useModesMessage(struct modesMessage *mm) {
+void useModesMessage(struct modesMessage *mm, struct client *c) {
     if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
         /* Track aircrafts in interactive mode or if the HTTP
          * interface is enabled. */
         if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) {
-            struct aircraft *a = interactiveReceiveData(mm);
+            struct aircraft *a = interactiveReceiveData(mm,c);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
         /* In non-interactive way, display messages on standard output. */
@@ -1597,6 +1599,7 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     a->squawk = 0;
     a->ground = -1;
     a->next = NULL;
+    a->client = NULL;
     return a;
 }
 
@@ -1742,7 +1745,7 @@ void decodeCPR(struct aircraft *a) {
 }
 
 /* Receive new messages and populate the interactive mode with more info. */
-struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
+struct aircraft *interactiveReceiveData(struct modesMessage *mm, struct client *c) {
     uint32_t addr;
     struct aircraft *a, *aux;
 
@@ -1776,6 +1779,7 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
 
     a->seen = time(NULL);
     a->messages++;
+    a->client = c;
 
     a->ground = 0;
 
@@ -1970,6 +1974,7 @@ void modesAcceptClients(void) {
         c->service = services[j];
         c->fd = fd;
         c->buflen = 0;
+	c->verbatim[0] = '\0';
         Modes.clients[fd] = c;
         anetSetSendBuffer(Modes.aneterr,fd,MODES_NET_SNDBUF_SIZE);
 
@@ -2129,6 +2134,12 @@ int decodeHexMessage(struct client *c) {
         l--;
     }
 
+    /* if the preamble is #, copy all but that */
+    if (hex[0] == '#') {
+	strncpy (c->verbatim, hex + 1, l);
+	return 0;
+    }
+
     /* Turn the message into binary. */
     if (l < 2 || hex[0] != '*' || hex[l-1] != ';') return 0;
     hex++; l-=2; /* Skip * and ; */
@@ -2141,7 +2152,7 @@ int decodeHexMessage(struct client *c) {
         msg[j/2] = (high<<4) | low;
     }
     decodeModesMessage(&mm,msg);
-    useModesMessage(&mm);
+    useModesMessage(&mm,c);
     return 0;
 }
 
@@ -2432,6 +2443,10 @@ void showFlightsTSV(void) {
         if (a->lat != 0 || a->lon != 0) {
 	    p += sprintf(p, "\tspeed\t%-7d\tlat\t%-7.03f\tlon\t%-7.03f\theading\t%-3d",
 		a->speed, a->lat, a->lon, a->track);
+	}
+
+	if (a->client && a->client->verbatim) {
+	    p += sprintf(p, "\t%s", a->client->verbatim);
 	}
 
 	p += sprintf(p, "\n");
