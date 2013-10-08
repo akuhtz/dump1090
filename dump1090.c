@@ -1372,6 +1372,39 @@ int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMess
     return TCL_OK;
 }
 
+/* This function takes an aircraft structure and writes it into a Tcl array
+ * as key-value pairs */
+int aircraftToTclArray(Tcl_Interp *interp, char *arrayName, struct aircraft *ac) {
+    Tcl_SetVar2 (interp, arrayName, "hexaddr", ac->hexaddr, 0);
+    Tcl_SetVar2 (interp, arrayName, "flight", ac->flight, 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj (ac->altitude), 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "seen", Tcl_NewLongObj (ac->seen), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "emitted", Tcl_NewLongObj (ac->emitted), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "speed", Tcl_NewIntObj (ac->speed), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "heading", Tcl_NewIntObj (ac->track), 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "squawk", Tcl_NewIntObj (ac->squawk), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "ground", Tcl_NewIntObj (ac->ground), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "messages", Tcl_NewLongObj (ac->messages), 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "odd_cprlat", Tcl_NewIntObj (ac->odd_cprlat), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "odd_cprlon", Tcl_NewIntObj (ac->odd_cprlon), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "even_cprlat", Tcl_NewIntObj (ac->even_cprlat), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "even_cprlon", Tcl_NewIntObj (ac->even_cprlon), 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "lat", Tcl_NewDoubleObj (ac->lat), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "lon", Tcl_NewDoubleObj (ac->lon), 0);
+
+    Tcl_SetVar2Ex (interp, arrayName, "odd_cprtime", Tcl_NewWideIntObj (ac->odd_cprtime), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "even_cprtime", Tcl_NewWideIntObj (ac->even_cprtime), 0);
+
+    // NB probably need to decode client
+
+    return TCL_OK;
+}
+
 /*-----------------------------------------------------------------------------
  * dump1090_DecodeModesObjCmd --
  *  
