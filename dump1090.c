@@ -1245,12 +1245,12 @@ void displayModesMessage(struct modesMessage *mm) {
 #ifdef TCL
 /* This function gets a decoded Mode S Message and writes it to a Tcl array
  * in a human readable format. */
-int modesMessageToTclArray(Tcl_Interp *interp, struct modesMessage *mm) {
+int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMessage *mm) {
     int j;
     char string[1024], *p = string;
 
     sprintf(string, "%02x%02x%02x\n", mm->aa1, mm->aa2, mm->aa3);
-    Tcl_SetVar2 (interp, "row", "hexaddr", string, 0);
+    Tcl_SetVar2 (interp, arrayName, "hexaddr", string, 0);
 
     if (Modes.onlyaddr) {
         return TCL_OK;
@@ -1262,68 +1262,68 @@ int modesMessageToTclArray(Tcl_Interp *interp, struct modesMessage *mm) {
 	p += sprintf(p, "%02x", mm->msg[j]);
     }
     *p++ = ';';
-    Tcl_SetVar2 (interp, "row", "raw", string, 0);
+    Tcl_SetVar2 (interp, arrayName, "raw", string, 0);
 
     sprintf(string, "%06x", (int)mm->crc);
-    Tcl_SetVar2 (interp, "row", "crc", string, 0);
+    Tcl_SetVar2 (interp, arrayName, "crc", string, 0);
 
-    Tcl_SetVar2Ex (interp, "row", "crcok", Tcl_NewBooleanObj (mm->crcok), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "crcok", Tcl_NewBooleanObj (mm->crcok), 0);
 
-    Tcl_SetVar2Ex (interp, "row", "msgtype", Tcl_NewIntObj (mm->msgtype), 0);
+    Tcl_SetVar2Ex (interp, arrayName, "msgtype", Tcl_NewIntObj (mm->msgtype), 0);
 
     if (mm->errorbit != -1) {
-	Tcl_SetVar2Ex (interp, "row", "bitfixed", Tcl_NewIntObj (mm->errorbit), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "bitfixed", Tcl_NewIntObj (mm->errorbit), 0);
     }
 
     if (mm->msgtype == 0) {
         /* DF 0 */
-	Tcl_SetVar2 (interp, "row", "type", "short_air_air_surveillance", 0);
+	Tcl_SetVar2 (interp, arrayName, "type", "short_air_air_surveillance", 0);
 
-	Tcl_SetVar2Ex (interp, "row", "alt", Tcl_NewIntObj (mm->altitude), 0);
-	Tcl_SetVar2 (interp, "row", "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
+	Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj (mm->altitude), 0);
+	Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
 
     } else if (mm->msgtype == 4 || mm->msgtype == 20) {
-	Tcl_SetVar2 (interp, "row", "type", 
+	Tcl_SetVar2 (interp, arrayName, "type", 
             (mm->msgtype == 4) ? "alt_reply_surveil" : "alt_reply_comm_b", 0);
 
-	Tcl_SetVar2 (interp, "row", "status", fs_str[mm->fs], 0);
+	Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
 
-	Tcl_SetVar2Ex (interp, "row", "dr", Tcl_NewIntObj (mm->dr), 0);
-	Tcl_SetVar2Ex (interp, "row", "um", Tcl_NewIntObj (mm->um), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
 
-	Tcl_SetVar2Ex (interp, "row", "alt", Tcl_NewIntObj(mm->altitude), 0);
-	Tcl_SetVar2 (interp, "row", "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
+	Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
+	Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
 
         if (mm->msgtype == 20) {
             /* TODO: 56 bits DF20 MB additional field. */
-	    Tcl_SetVar2 (interp, "row", "error", "df20_mb_additional_field", 0);
+	    Tcl_SetVar2 (interp, arrayName, "error", "df20_mb_additional_field", 0);
         }
     } else if (mm->msgtype == 5 || mm->msgtype == 21) {
-	Tcl_SetVar2 (interp, "row", "type", 
+	Tcl_SetVar2 (interp, arrayName, "type", 
             (mm->msgtype == 5) ? "identity_reply_surveil" : "identity_reply_comm_b", 0);
 
-	Tcl_SetVar2 (interp, "row", "status", fs_str[mm->fs], 0);
+	Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
 
-	Tcl_SetVar2Ex (interp, "row", "dr", Tcl_NewIntObj (mm->dr), 0);
-	Tcl_SetVar2Ex (interp, "row", "um", Tcl_NewIntObj (mm->um), 0);
-	Tcl_SetVar2Ex (interp, "row", "squawk", Tcl_NewIntObj (mm->identity), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "squawk", Tcl_NewIntObj (mm->identity), 0);
 
         if (mm->msgtype == 21) {
             /* TODO: 56 bits DF21 MB additional field. */
-	    Tcl_SetVar2 (interp, "row", "error", "df21_mb_additional_field", 0);
+	    Tcl_SetVar2 (interp, arrayName, "error", "df21_mb_additional_field", 0);
         }
     } else if (mm->msgtype == 11) {
         /* DF 11 */
-	Tcl_SetVar2 (interp, "row", "type", "all_call_reply", 0);
-	Tcl_SetVar2 (interp, "row", "capability", ca_str[mm->ca], 0);
+	Tcl_SetVar2 (interp, arrayName, "type", "all_call_reply", 0);
+	Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
     } else if (mm->msgtype == 17) {
         /* DF 17 */
-	Tcl_SetVar2 (interp, "row", "type", "adsb_message", 0);
-	Tcl_SetVar2 (interp, "row", "capability", ca_str[mm->ca], 0);
+	Tcl_SetVar2 (interp, arrayName, "type", "adsb_message", 0);
+	Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
 
-	Tcl_SetVar2Ex (interp, "row", "squitter_type", Tcl_NewIntObj (mm->metype), 0);
-	Tcl_SetVar2Ex (interp, "row", "squitter_sub", Tcl_NewIntObj (mm->mesub), 0);
-	Tcl_SetVar2 (interp, "row", "squitter_name", getMEDescription(mm->metype,mm->mesub), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "squitter_type", Tcl_NewIntObj (mm->metype), 0);
+	Tcl_SetVar2Ex (interp, arrayName, "squitter_sub", Tcl_NewIntObj (mm->mesub), 0);
+	Tcl_SetVar2 (interp, arrayName, "squitter_name", getMEDescription(mm->metype,mm->mesub), 0);
 
         /* Decode the extended squitter message. */
         if (mm->metype >= 1 && mm->metype <= 4) {
@@ -1335,38 +1335,38 @@ int modesMessageToTclArray(Tcl_Interp *interp, struct modesMessage *mm) {
                 "Aircraft Type A"
             };
 
-	    Tcl_SetVar2 (interp, "row", "aircraft_type", ac_type_str[mm->aircraft_type], 0);
-	    Tcl_SetVar2 (interp, "row", "identification", mm->flight, 0);
+	    Tcl_SetVar2 (interp, arrayName, "aircraft_type", ac_type_str[mm->aircraft_type], 0);
+	    Tcl_SetVar2 (interp, arrayName, "identification", mm->flight, 0);
         } else if (mm->metype >= 9 && mm->metype <= 18) {
-	    Tcl_SetVar2 (interp, "row", "f_flag", mm->fflag ? "odd" : "even", 0);
-	    Tcl_SetVar2 (interp, "row", "t_flag", mm->tflag ? "UTC" : "non-UTC", 0);
-	    Tcl_SetVar2Ex (interp, "row", "alt", Tcl_NewIntObj(mm->altitude), 0);
-	    Tcl_SetVar2 (interp, "row", "alt_unit", "feet", 0);
+	    Tcl_SetVar2 (interp, arrayName, "f_flag", mm->fflag ? "odd" : "even", 0);
+	    Tcl_SetVar2 (interp, arrayName, "t_flag", mm->tflag ? "UTC" : "non-UTC", 0);
+	    Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
+	    Tcl_SetVar2 (interp, arrayName, "alt_unit", "feet", 0);
 
-	    Tcl_SetVar2Ex (interp, "row", "raw_lat", Tcl_NewIntObj(mm->raw_latitude), 0);
-	    Tcl_SetVar2Ex (interp, "row", "raw_lon", Tcl_NewIntObj(mm->raw_longitude), 0);
+	    Tcl_SetVar2Ex (interp, arrayName, "raw_lat", Tcl_NewIntObj(mm->raw_latitude), 0);
+	    Tcl_SetVar2Ex (interp, arrayName, "raw_lon", Tcl_NewIntObj(mm->raw_longitude), 0);
         } else if (mm->metype == 19 && mm->mesub >= 1 && mm->mesub <= 4) {
             if (mm->mesub == 1 || mm->mesub == 2) {
                 /* Velocity */
-		Tcl_SetVar2Ex (interp, "row", "ew_dir", Tcl_NewIntObj(mm->ew_dir), 0);
-		Tcl_SetVar2Ex (interp, "row", "ew_vel", Tcl_NewIntObj(mm->ew_velocity), 0);
-		Tcl_SetVar2Ex (interp, "row", "ns_dir", Tcl_NewIntObj(mm->ns_dir), 0);
-		Tcl_SetVar2Ex (interp, "row", "ns_vel", Tcl_NewIntObj(mm->ns_velocity), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "ew_dir", Tcl_NewIntObj(mm->ew_dir), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "ew_vel", Tcl_NewIntObj(mm->ew_velocity), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "ns_dir", Tcl_NewIntObj(mm->ns_dir), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "ns_vel", Tcl_NewIntObj(mm->ns_velocity), 0);
 
-		Tcl_SetVar2Ex (interp, "row", "vert_src", Tcl_NewIntObj(mm->vert_rate_source), 0);
-		Tcl_SetVar2Ex (interp, "row", "vert_sign", Tcl_NewIntObj(mm->vert_rate_sign), 0);
-		Tcl_SetVar2Ex (interp, "row", "vert_rate", Tcl_NewIntObj(mm->vert_rate), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "vert_src", Tcl_NewIntObj(mm->vert_rate_source), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "vert_sign", Tcl_NewIntObj(mm->vert_rate_sign), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "vert_rate", Tcl_NewIntObj(mm->vert_rate), 0);
             } else if (mm->mesub == 3 || mm->mesub == 4) {
-		Tcl_SetVar2Ex (interp, "row", "heading_status", Tcl_NewIntObj(mm->heading_is_valid), 0);
-		Tcl_SetVar2Ex (interp, "row", "heading", Tcl_NewIntObj(mm->heading), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "heading_status", Tcl_NewIntObj(mm->heading_is_valid), 0);
+		Tcl_SetVar2Ex (interp, arrayName, "heading", Tcl_NewIntObj(mm->heading), 0);
             }
         } else {
-	    Tcl_SetVar2 (interp, "row", "error", "unrecognized_type", 0);
-	    Tcl_SetVar2Ex (interp, "row", "subtype", Tcl_NewIntObj(mm->mesub), 0);
+	    Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
+	    Tcl_SetVar2Ex (interp, arrayName, "subtype", Tcl_NewIntObj(mm->mesub), 0);
         }
     } else {
         if (Modes.check_crc)
-	    Tcl_SetVar2 (interp, "row", "error", "unrecognized_type", 0);
+	    Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
     }
 
     return TCL_OK;
