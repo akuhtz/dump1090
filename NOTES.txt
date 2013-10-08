@@ -1,0 +1,7 @@
+
+we need --no-crc-check for stuff coming over ethernet from an SBS-3.
+
+
+./dump1090 --no-crc-check --net --net-only --interactive --net-http-port 8081  --interactive-rows 100
+
+
