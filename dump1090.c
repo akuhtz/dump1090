@@ -1372,6 +1372,40 @@ int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMess
     return TCL_OK;
 }
 
+/*-----------------------------------------------------------------------------
+ * dump1090_DecodeModesObjCmd --
+ *  
+ * Implements the `decode_modes' command:
+ *    decode_modes message
+ *  
+ * Results:
+ *      A standard Tcl result.
+ *      
+ * Side effects:
+ *      See the user documentation.
+ *-----------------------------------------------------------------------------
+ */
+int
+dump1090_DecodeModesObjCmd (ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
+{
+    char *arrayName;
+    unsigned char *message;
+    struct modesMessage mm;
+
+    if (objc != 3) {
+	Tcl_WrongNumArgs (interp, 1, objv, "arrayName message");
+	return TCL_ERROR;
+    }
+
+    arrayName = Tcl_GetString (objv[1]);
+    message = Tcl_GetByteArrayFromObj (objv[2], NULL);
+
+    decodeModesMessage(&mm, message);
+
+    modesMessageToTclArray(interp, arrayName, &mm);
+    return TCL_OK;
+}
+
 #endif
 
 
