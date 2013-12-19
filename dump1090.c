@@ -44,10 +44,14 @@
 #include "rtl-sdr.h"
 #include "anet.h"
 
-#define TCL
+// #define TCL
 #ifdef TCL
 // #include <tcl.h>
-#include "/usr/local/include/tcl8.5/tcl.h"
+# ifdef __arm__
+#  include "/usr//include/tcl8.5/tcl.h"
+# else
+#  include "/usr/local/include/tcl8.5/tcl.h"
+# endif
 #endif
 
 #define MODES_DEFAULT_RATE         2000000
@@ -180,6 +184,7 @@ struct {
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
+    int quiet;                	    /* Quiet mode */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -292,6 +297,7 @@ void modesInitConfig(void) {
     Modes.interactive = 0;
     Modes.interactive_rows = MODES_INTERACTIVE_ROWS;
     Modes.interactive_ttl = MODES_INTERACTIVE_TTL;
+    Modes.quiet = 0;
     Modes.aggressive = 0;
 }
 
@@ -1763,12 +1769,12 @@ void useModesMessage(struct modesMessage *mm, struct client *c) {
     if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
         /* Track aircrafts in interactive mode or if the HTTP
          * interface is enabled. */
-        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) {
+        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0 || Modes.stat_baked_connections > 0) {
             struct aircraft *a = interactiveReceiveData(mm,c);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
         /* In non-interactive way, display messages on standard output. */
-        if (!Modes.interactive) {
+        if (!Modes.interactive && !Modes.quiet) {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
@@ -2685,6 +2691,7 @@ void showHelp(void) {
 "--interactive            Interactive mode refreshing data on screen.\n"
 "--interactive-rows <num> Max number of rows in interactive mode (default: 15).\n"
 "--interactive-ttl <sec>  Remove from list if idle for <sec> (default: 60).\n"
+"--quiet                  Suppress dumping to stdout.\n"
 "--raw                    Show only messages hex values.\n"
 "--net                    Enable networking.\n"
 "--net-only               Enable just networking, no RTL device or file used.\n"
@@ -2788,6 +2795,8 @@ int main(int argc, char **argv) {
             Modes.interactive_rows = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--interactive-ttl")) {
             Modes.interactive_ttl = atoi(argv[++j]);
+        } else if (!strcmp(argv[j],"--quiet")) {
+            Modes.quiet = 1;
         } else if (!strcmp(argv[j],"--debug") && more) {
             char *f = argv[++j];
             while(*f) {
