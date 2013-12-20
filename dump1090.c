@@ -117,8 +117,10 @@ struct aircraft {
     char hexaddr[7];    /* Printable ICAO address */
     char flight[9];     /* Flight number */
     int altitude;       /* Altitude */
+    int emitted_altitude; /* last emitted Altitude */
     int speed;          /* Velocity computed from EW and NS components. */
     int track;          /* Angle of flight. */
+    int emitted_track;  /* last emitted Angle of flight. */
     time_t seen;        /* Time at which the last packet was received. */
     time_t emitted;        /* Time at which the aircraft info was last emitted. */
     int squawk;               /* 13 bits identity (Squawk). */
@@ -1796,8 +1798,10 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     snprintf(a->hexaddr,sizeof(a->hexaddr),"%06x",(int)addr);
     a->flight[0] = '\0';
     a->altitude = 0;
+    a->emitted_altitude = 0;
     a->speed = 0;
     a->track = 0;
+    a->emitted_track = 0;
     a->odd_cprlat = 0;
     a->odd_cprlon = 0;
     a->odd_cprtime = 0;
@@ -1807,6 +1811,7 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     a->lat = 0;
     a->lon = 0;
     a->seen = time(NULL);
+    a->emitted = 0;
     a->messages = 0;
     a->squawk = 0;
     a->ground = -1;
@@ -2635,10 +2640,35 @@ void showFlightsTSV(void) {
 	    continue;
 	}
 
-	// enable if you want only ads-b
-	if (0 && a->lat == 0 && a->lon == 0) {
+	// if it's over 10,000 feet, don't emit more than once every 10 seconds
+	if (a->altitude > 10000 && emittedSecondsAgo < 10) {
 	    continue;
 	}
+
+	// disable if you want only ads-b
+	// also don't send mode S very often
+	if (a->lat == 0 && a->lon == 0) {
+	    if (emittedSecondsAgo < 30) {
+		continue;
+	    }
+	} else {
+	    // if it hasn't changed altitude very much and it hasn't changed heading very much
+	    // don't update real often
+	    if (abs(a->track - a->emitted_track) < 2 && abs(a->altitude - a->emitted_altitude) < 50) {
+		if (a->altitude < 10000) {
+		    // it hasn't changed much but we're below 10,000 feet so update more frequently
+		    if (emittedSecondsAgo < 10) {
+			continue;
+		    }
+		} else {
+		    // above 10,000 feet, don't update so often when it hasn't changed much
+		    if (emittedSecondsAgo < 30) {
+			continue;
+		    }
+		}
+	    }
+	}
+
 
 	p += sprintf(p, "clock\t%ld\thexid\t%06X", a->seen, a->addr);
 
@@ -2670,6 +2700,8 @@ void showFlightsTSV(void) {
 	p += sprintf(p, "\n");
 
 	a->emitted = now;
+	a->emitted_altitude = a->altitude;
+	a->emitted_track = a->track;
 
 	modesSendAllClients(Modes.bakedos, msg, p-msg);
     }
