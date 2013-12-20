@@ -2673,14 +2673,14 @@ void showFlightsTSV(void) {
 	p += sprintf(p, "clock\t%ld\thexid\t%06X", a->seen, a->addr);
 
 	if (*a->flight != '\0') {
-	    p += sprintf(p, "\tident\t%-8s", a->flight);
+	    p += sprintf(p, "\tident\t%s", a->flight);
 	}
 
 	if (a->squawk != 0) {
 	    p += sprintf(p, "\tsquawk\t%04d", a->squawk);
 	}
 
-	p += sprintf(p, "\talt\t%-9d", a->altitude);
+	p += sprintf(p, "\talt\t%d", a->altitude);
 
 	if (a->ground == 1) {
 	    p += sprintf(p, "\tairGround\tG");
@@ -2689,7 +2689,7 @@ void showFlightsTSV(void) {
 	}
 
         if (a->lat != 0 || a->lon != 0) {
-	    p += sprintf(p, "\tspeed\t%-7d\tlat\t%-7.03f\tlon\t%-7.03f\theading\t%-3d",
+	    p += sprintf(p, "\tspeed\t%d\tlat\t%.5f\tlon\t%.5f\theading\t%d",
 		a->speed, a->lat, a->lon, a->track);
 	}
 
