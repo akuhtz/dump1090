@@ -2693,7 +2693,7 @@ void showFlightsTSV(void) {
 		a->speed, a->lat, a->lon, a->track);
 	}
 
-	if (a->client && a->client->verbatim) {
+	if (a->client && a->client->verbatim && *a->client->verbatim != '\0') {
 	    p += sprintf(p, "\t%s", a->client->verbatim);
 	}
 
