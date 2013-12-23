@@ -2610,12 +2610,18 @@ void modesReadFromClients(void) {
     }
 }
 
+#define TSV_BUFFER_SIZE 8192
+#define TSV_MAX_PACKET_SIZE 160
+
 void showFlightsTSV(void) {
     struct aircraft *a = Modes.aircrafts;
     time_t now = time(NULL);
     int age, emittedSecondsAgo;
     static time_t lastTime = 0;
+    char msg[TSV_BUFFER_SIZE], *p = msg;
+	int nCombined = 0;
 
+    // don't do anything if there are no baked (TSV) connections
     if (Modes.stat_baked_connections == 0) {
         return;
     }
@@ -2625,8 +2631,6 @@ void showFlightsTSV(void) {
     }
 
     for(a = Modes.aircrafts; a; a = a->next) {
-	char msg[1024], *p = msg;
-
 	age = (int)(now - a->seen);
 	emittedSecondsAgo = (int)(now - a->emitted);
 
@@ -2703,7 +2707,23 @@ void showFlightsTSV(void) {
 	a->emitted_altitude = a->altitude;
 	a->emitted_track = a->track;
 
+	nCombined++;
+
+	// we are aggregating multiple messages into the buffer...
+	// if the buffer is getting pretty full, send what we've assembled
+	if (p - msg > TSV_BUFFER_SIZE - TSV_MAX_PACKET_SIZE) {
+	    modesSendAllClients(Modes.bakedos, msg, p-msg);
+	    p = msg;
+		printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
+		nCombined = 0;
+	}
+    }
+
+    // we've looked at all the candidate aircraft,
+    // if there's anything in the buffer, send it
+    if (p != msg) {
 	modesSendAllClients(Modes.bakedos, msg, p-msg);
+	printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
     }
 
     lastTime = now;
@@ -2933,3 +2953,5 @@ int main(int argc, char **argv) {
     rtlsdr_close(Modes.dev);
     return 0;
 }
+
+// vim: set ts=4 sw=4 sts=4 expandtab :
