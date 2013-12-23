@@ -186,7 +186,7 @@ struct {
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
-    int quiet;                	    /* Quiet mode */
+    int quiet;                      /* Quiet mode */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -1267,7 +1267,7 @@ int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMess
     /* Show the raw message. */
     *p++ = '*';
     for (j = 0; j < mm->msgbits/8; j++) {
-	p += sprintf(p, "%02x", mm->msg[j]);
+        p += sprintf(p, "%02x", mm->msg[j]);
     }
     *p++ = ';';
     Tcl_SetVar2 (interp, arrayName, "raw", string, 0);
@@ -1280,58 +1280,58 @@ int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMess
     Tcl_SetVar2Ex (interp, arrayName, "msgtype", Tcl_NewIntObj (mm->msgtype), 0);
 
     if (mm->errorbit != -1) {
-	Tcl_SetVar2Ex (interp, arrayName, "bitfixed", Tcl_NewIntObj (mm->errorbit), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "bitfixed", Tcl_NewIntObj (mm->errorbit), 0);
     }
 
     if (mm->msgtype == 0) {
         /* DF 0 */
-	Tcl_SetVar2 (interp, arrayName, "type", "short_air_air_surveillance", 0);
+        Tcl_SetVar2 (interp, arrayName, "type", "short_air_air_surveillance", 0);
 
-	Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj (mm->altitude), 0);
-	Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
+        Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj (mm->altitude), 0);
+        Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
 
     } else if (mm->msgtype == 4 || mm->msgtype == 20) {
-	Tcl_SetVar2 (interp, arrayName, "type", 
+        Tcl_SetVar2 (interp, arrayName, "type", 
             (mm->msgtype == 4) ? "alt_reply_surveil" : "alt_reply_comm_b", 0);
 
-	Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
+        Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
 
-	Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
-	Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
 
-	Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
-	Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
+        Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
+        Tcl_SetVar2 (interp, arrayName, "alt_unit", (mm->unit == MODES_UNIT_METERS) ? "meters" : "feet", 0);
 
         if (mm->msgtype == 20) {
             /* TODO: 56 bits DF20 MB additional field. */
-	    Tcl_SetVar2 (interp, arrayName, "error", "df20_mb_additional_field", 0);
+            Tcl_SetVar2 (interp, arrayName, "error", "df20_mb_additional_field", 0);
         }
     } else if (mm->msgtype == 5 || mm->msgtype == 21) {
-	Tcl_SetVar2 (interp, arrayName, "type", 
+        Tcl_SetVar2 (interp, arrayName, "type", 
             (mm->msgtype == 5) ? "identity_reply_surveil" : "identity_reply_comm_b", 0);
 
-	Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
+        Tcl_SetVar2 (interp, arrayName, "status", fs_str[mm->fs], 0);
 
-	Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
-	Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
-	Tcl_SetVar2Ex (interp, arrayName, "squawk", Tcl_NewIntObj (mm->identity), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "dr", Tcl_NewIntObj (mm->dr), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "um", Tcl_NewIntObj (mm->um), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "squawk", Tcl_NewIntObj (mm->identity), 0);
 
         if (mm->msgtype == 21) {
             /* TODO: 56 bits DF21 MB additional field. */
-	    Tcl_SetVar2 (interp, arrayName, "error", "df21_mb_additional_field", 0);
+            Tcl_SetVar2 (interp, arrayName, "error", "df21_mb_additional_field", 0);
         }
     } else if (mm->msgtype == 11) {
         /* DF 11 */
-	Tcl_SetVar2 (interp, arrayName, "type", "all_call_reply", 0);
-	Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
+        Tcl_SetVar2 (interp, arrayName, "type", "all_call_reply", 0);
+        Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
     } else if (mm->msgtype == 17) {
         /* DF 17 */
-	Tcl_SetVar2 (interp, arrayName, "type", "adsb_message", 0);
-	Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
+        Tcl_SetVar2 (interp, arrayName, "type", "adsb_message", 0);
+        Tcl_SetVar2 (interp, arrayName, "capability", ca_str[mm->ca], 0);
 
-	Tcl_SetVar2Ex (interp, arrayName, "squitter_type", Tcl_NewIntObj (mm->metype), 0);
-	Tcl_SetVar2Ex (interp, arrayName, "squitter_sub", Tcl_NewIntObj (mm->mesub), 0);
-	Tcl_SetVar2 (interp, arrayName, "squitter_name", getMEDescription(mm->metype,mm->mesub), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "squitter_type", Tcl_NewIntObj (mm->metype), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "squitter_sub", Tcl_NewIntObj (mm->mesub), 0);
+        Tcl_SetVar2 (interp, arrayName, "squitter_name", getMEDescription(mm->metype,mm->mesub), 0);
 
         /* Decode the extended squitter message. */
         if (mm->metype >= 1 && mm->metype <= 4) {
@@ -1343,38 +1343,38 @@ int modesMessageToTclArray(Tcl_Interp *interp, char *arrayName, struct modesMess
                 "Aircraft Type A"
             };
 
-	    Tcl_SetVar2 (interp, arrayName, "aircraft_type", ac_type_str[mm->aircraft_type], 0);
-	    Tcl_SetVar2 (interp, arrayName, "identification", mm->flight, 0);
+        Tcl_SetVar2 (interp, arrayName, "aircraft_type", ac_type_str[mm->aircraft_type], 0);
+        Tcl_SetVar2 (interp, arrayName, "identification", mm->flight, 0);
         } else if (mm->metype >= 9 && mm->metype <= 18) {
-	    Tcl_SetVar2 (interp, arrayName, "f_flag", mm->fflag ? "odd" : "even", 0);
-	    Tcl_SetVar2 (interp, arrayName, "t_flag", mm->tflag ? "UTC" : "non-UTC", 0);
-	    Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
-	    Tcl_SetVar2 (interp, arrayName, "alt_unit", "feet", 0);
+        Tcl_SetVar2 (interp, arrayName, "f_flag", mm->fflag ? "odd" : "even", 0);
+        Tcl_SetVar2 (interp, arrayName, "t_flag", mm->tflag ? "UTC" : "non-UTC", 0);
+        Tcl_SetVar2Ex (interp, arrayName, "alt", Tcl_NewIntObj(mm->altitude), 0);
+        Tcl_SetVar2 (interp, arrayName, "alt_unit", "feet", 0);
 
-	    Tcl_SetVar2Ex (interp, arrayName, "raw_lat", Tcl_NewIntObj(mm->raw_latitude), 0);
-	    Tcl_SetVar2Ex (interp, arrayName, "raw_lon", Tcl_NewIntObj(mm->raw_longitude), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "raw_lat", Tcl_NewIntObj(mm->raw_latitude), 0);
+        Tcl_SetVar2Ex (interp, arrayName, "raw_lon", Tcl_NewIntObj(mm->raw_longitude), 0);
         } else if (mm->metype == 19 && mm->mesub >= 1 && mm->mesub <= 4) {
             if (mm->mesub == 1 || mm->mesub == 2) {
                 /* Velocity */
-		Tcl_SetVar2Ex (interp, arrayName, "ew_dir", Tcl_NewIntObj(mm->ew_dir), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "ew_vel", Tcl_NewIntObj(mm->ew_velocity), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "ns_dir", Tcl_NewIntObj(mm->ns_dir), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "ns_vel", Tcl_NewIntObj(mm->ns_velocity), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "ew_dir", Tcl_NewIntObj(mm->ew_dir), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "ew_vel", Tcl_NewIntObj(mm->ew_velocity), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "ns_dir", Tcl_NewIntObj(mm->ns_dir), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "ns_vel", Tcl_NewIntObj(mm->ns_velocity), 0);
 
-		Tcl_SetVar2Ex (interp, arrayName, "vert_src", Tcl_NewIntObj(mm->vert_rate_source), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "vert_sign", Tcl_NewIntObj(mm->vert_rate_sign), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "vert_rate", Tcl_NewIntObj(mm->vert_rate), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "vert_src", Tcl_NewIntObj(mm->vert_rate_source), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "vert_sign", Tcl_NewIntObj(mm->vert_rate_sign), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "vert_rate", Tcl_NewIntObj(mm->vert_rate), 0);
             } else if (mm->mesub == 3 || mm->mesub == 4) {
-		Tcl_SetVar2Ex (interp, arrayName, "heading_status", Tcl_NewIntObj(mm->heading_is_valid), 0);
-		Tcl_SetVar2Ex (interp, arrayName, "heading", Tcl_NewIntObj(mm->heading), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "heading_status", Tcl_NewIntObj(mm->heading_is_valid), 0);
+                Tcl_SetVar2Ex (interp, arrayName, "heading", Tcl_NewIntObj(mm->heading), 0);
             }
         } else {
-	    Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
-	    Tcl_SetVar2Ex (interp, arrayName, "subtype", Tcl_NewIntObj(mm->mesub), 0);
+            Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
+            Tcl_SetVar2Ex (interp, arrayName, "subtype", Tcl_NewIntObj(mm->mesub), 0);
         }
     } else {
         if (Modes.check_crc)
-	    Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
+            Tcl_SetVar2 (interp, arrayName, "error", "unrecognized_type", 0);
     }
 
     return TCL_OK;
@@ -1434,8 +1434,8 @@ dump1090_DecodeModesObjCmd (ClientData clientData, Tcl_Interp *interp, int objc,
     struct modesMessage mm;
 
     if (objc != 3) {
-	Tcl_WrongNumArgs (interp, 1, objv, "arrayName message");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs (interp, 1, objv, "arrayName message");
+        return TCL_ERROR;
     }
 
     arrayName = Tcl_GetString (objv[1]);
@@ -2003,8 +2003,8 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm, struct client *
     if (mm->msgtype == 4 || mm->msgtype == 5 || mm->msgtype == 21) {
         a->squawk = mm->identity;
         if (mm->fs == 1 || mm->fs == 3) {
-	    a->ground = 1;
-	}
+        a->ground = 1;
+    }
     }
 
     if (mm->msgtype == 0 || mm->msgtype == 4 || mm->msgtype == 20) {
@@ -2191,7 +2191,7 @@ void modesAcceptClients(void) {
         c->service = services[j];
         c->fd = fd;
         c->buflen = 0;
-	c->verbatim[0] = '\0';
+    c->verbatim[0] = '\0';
         Modes.clients[fd] = c;
         anetSetSendBuffer(Modes.aneterr,fd,MODES_NET_SNDBUF_SIZE);
 
@@ -2353,14 +2353,14 @@ int decodeHexMessage(struct client *c) {
 
     /* if the preamble is #, copy all but that */
     if (hex[0] == '#') {
-	if (hex[l-1] == '\n') {
-	    hex[--l] == '\0';
-	}
-	if (hex[l-1] == ';') {
-	    hex[--l] == '\0';
-	}
-	strncpy (c->verbatim, hex + 1, l);
-	return 0;
+    if (hex[l-1] == '\n') {
+        hex[--l] == '\0';
+    }
+    if (hex[l-1] == ';') {
+        hex[--l] == '\0';
+    }
+    strncpy (c->verbatim, hex + 1, l);
+    return 0;
     }
 
     /* Turn the message into binary. */
@@ -2619,7 +2619,7 @@ void showFlightsTSV(void) {
     int age, emittedSecondsAgo;
     static time_t lastTime = 0;
     char msg[TSV_BUFFER_SIZE], *p = msg;
-	int nCombined = 0;
+    int nCombined = 0;
 
     // don't do anything if there are no baked (TSV) connections
     if (Modes.stat_baked_connections == 0) {
@@ -2631,99 +2631,101 @@ void showFlightsTSV(void) {
     }
 
     for(a = Modes.aircrafts; a; a = a->next) {
-	age = (int)(now - a->seen);
-	emittedSecondsAgo = (int)(now - a->emitted);
+        age = (int)(now - a->seen);
+        emittedSecondsAgo = (int)(now - a->emitted);
 
-	// don't emit if it hasn't updated since last time
-	if (age > emittedSecondsAgo) {
-	    continue;
-	}
+        // don't emit if it hasn't updated since last time
+        if (age > emittedSecondsAgo) {
+            continue;
+        }
 
-	// don't emit more than once every five seconds
-	if (emittedSecondsAgo < 5) {
-	    continue;
-	}
+        // don't emit more than once every five seconds
+        if (emittedSecondsAgo < 5) {
+            continue;
+        }
 
-	// if it's over 10,000 feet, don't emit more than once every 10 seconds
-	if (a->altitude > 10000 && emittedSecondsAgo < 10) {
-	    continue;
-	}
+        // if it's over 10,000 feet, don't emit more than once every 10 seconds
+        if (a->altitude > 10000 && emittedSecondsAgo < 10) {
+            continue;
+        }
 
-	// disable if you want only ads-b
-	// also don't send mode S very often
-	if (a->lat == 0 && a->lon == 0) {
-	    if (emittedSecondsAgo < 30) {
-		continue;
-	    }
-	} else {
-	    // if it hasn't changed altitude very much and it hasn't changed heading very much
-	    // don't update real often
-	    if (abs(a->track - a->emitted_track) < 2 && abs(a->altitude - a->emitted_altitude) < 50) {
-		if (a->altitude < 10000) {
-		    // it hasn't changed much but we're below 10,000 feet so update more frequently
-		    if (emittedSecondsAgo < 10) {
-			continue;
-		    }
-		} else {
-		    // above 10,000 feet, don't update so often when it hasn't changed much
-		    if (emittedSecondsAgo < 30) {
-			continue;
-		    }
-		}
-	    }
-	}
+        // disable if you want only ads-b
+        // also don't send mode S very often
+        if (a->lat == 0 && a->lon == 0) {
+            if (emittedSecondsAgo < 30) {
+                continue;
+            }
+        } else {
+            // if it hasn't changed altitude very much and it hasn't changed 
+            // heading very much, don't update real often
+            if (abs(a->track - a->emitted_track) < 2 && abs(a->altitude - a->emitted_altitude) < 50) {
+                if (a->altitude < 10000) {
+                    // it hasn't changed much but we're below 10,000 feet 
+                    // so update more frequently
+                    if (emittedSecondsAgo < 10) {
+                        continue;
+                    }
+                } else {
+                    // above 10,000 feet, don't update so often when it 
+                    // hasn't changed much
+                    if (emittedSecondsAgo < 30) {
+                        continue;
+                    }
+                }
+            }
+        }
 
 
-	p += sprintf(p, "clock\t%ld\thexid\t%06X", a->seen, a->addr);
+        p += sprintf(p, "clock\t%ld\thexid\t%06X", a->seen, a->addr);
 
-	if (*a->flight != '\0') {
-	    p += sprintf(p, "\tident\t%s", a->flight);
-	}
+        if (*a->flight != '\0') {
+            p += sprintf(p, "\tident\t%s", a->flight);
+        }
 
-	if (a->squawk != 0) {
-	    p += sprintf(p, "\tsquawk\t%04d", a->squawk);
-	}
+        if (a->squawk != 0) {
+            p += sprintf(p, "\tsquawk\t%04d", a->squawk);
+        }
 
-	p += sprintf(p, "\talt\t%d", a->altitude);
+        p += sprintf(p, "\talt\t%d", a->altitude);
 
-	if (a->ground == 1) {
-	    p += sprintf(p, "\tairGround\tG");
-	} else if (a->ground == 0) {
-	    p += sprintf(p, "\tairGround\tA");
-	}
+        if (a->ground == 1) {
+            p += sprintf(p, "\tairGround\tG");
+        } else if (a->ground == 0) {
+            p += sprintf(p, "\tairGround\tA");
+        }
 
         if (a->lat != 0 || a->lon != 0) {
-	    p += sprintf(p, "\tspeed\t%d\tlat\t%.5f\tlon\t%.5f\theading\t%d",
-		a->speed, a->lat, a->lon, a->track);
-	}
+            p += sprintf(p, "\tspeed\t%d\tlat\t%.5f\tlon\t%.5f\theading\t%d",
+                a->speed, a->lat, a->lon, a->track);
+        }
 
-	if (a->client && a->client->verbatim && *a->client->verbatim != '\0') {
-	    p += sprintf(p, "\t%s", a->client->verbatim);
-	}
+        if (a->client && a->client->verbatim && *a->client->verbatim != '\0') {
+            p += sprintf(p, "\t%s", a->client->verbatim);
+        }
 
-	p += sprintf(p, "\n");
+        p += sprintf(p, "\n");
 
-	a->emitted = now;
-	a->emitted_altitude = a->altitude;
-	a->emitted_track = a->track;
+        a->emitted = now;
+        a->emitted_altitude = a->altitude;
+        a->emitted_track = a->track;
 
-	nCombined++;
+        nCombined++;
 
-	// we are aggregating multiple messages into the buffer...
-	// if the buffer is getting pretty full, send what we've assembled
-	if (p - msg > TSV_BUFFER_SIZE - TSV_MAX_PACKET_SIZE) {
-	    modesSendAllClients(Modes.bakedos, msg, p-msg);
-	    p = msg;
-		printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
-		nCombined = 0;
-	}
+        // we are aggregating multiple messages into the buffer...
+        // if the buffer is getting pretty full, send what we've assembled
+        if (p - msg > TSV_BUFFER_SIZE - TSV_MAX_PACKET_SIZE) {
+            modesSendAllClients(Modes.bakedos, msg, p-msg);
+            p = msg;
+            printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
+            nCombined = 0;
+        }
     }
 
     // we've looked at all the candidate aircraft,
     // if there's anything in the buffer, send it
     if (p != msg) {
-	modesSendAllClients(Modes.bakedos, msg, p-msg);
-	printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
+        modesSendAllClients(Modes.bakedos, msg, p-msg);
+        printf("combined %d updates into one %ld-byte packet", nCombined, p-msg);
     }
 
     lastTime = now;
@@ -2780,7 +2782,7 @@ void backgroundTasks(void) {
         modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
-	showFlightsTSV();
+        showFlightsTSV();
     }
 
     /* Refresh screen when in interactive mode. */
