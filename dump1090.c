@@ -92,6 +92,7 @@
 #define MODES_INTERACTIVE_TTL 60                /* TTL before being removed */
 
 #define MODES_NET_MAX_FD 1024
+#define MODES_NET_OUTPUT_JSON_PORT 30005
 #define MODES_NET_OUTPUT_BAKED_PORT 30004
 #define MODES_NET_OUTPUT_SBS_PORT 30003
 #define MODES_NET_OUTPUT_RAW_PORT 30002
@@ -164,7 +165,8 @@ struct {
     char aneterr[ANET_ERR_LEN];
     struct client *clients[MODES_NET_MAX_FD]; /* Our clients. */
     int maxfd;                      /* Greatest fd currently active. */
-    int bakedos;                   /* baked output listening socket. */
+    int jsonos;                     /* json output listening socket. */
+    int bakedos;                    /* baked output listening socket. */
     int sbsos;                      /* SBS output listening socket. */
     int ros;                        /* Raw output listening socket. */
     int ris;                        /* Raw input listening socket. */
@@ -178,6 +180,7 @@ struct {
     int debug;                      /* Debugging mode. */
     int net;                        /* Enable networking. */
     int net_only;                   /* Enable just networking. */
+    int net_output_json_port;       /* json output TCP port. */
     int net_output_baked_port;      /* baked output TCP port. */
     int net_output_sbs_port;        /* SBS output TCP port. */
     int net_output_raw_port;        /* Raw output TCP port. */
@@ -207,6 +210,7 @@ struct {
     long long stat_http_requests;
     long long stat_sbs_connections;
     long long stat_baked_connections;
+    long long stat_json_connections;
     long long stat_out_of_phase;
 } Modes;
 
@@ -257,6 +261,7 @@ struct modesMessage {
 
 void interactiveShowData(void);
 struct aircraft* interactiveReceiveData(struct modesMessage *mm, struct client *c);
+void modesSendJsonOutput(struct modesMessage *mm, struct aircraft *a);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
 void useModesMessage(struct modesMessage *mm, struct client *c);
@@ -289,6 +294,7 @@ void modesInitConfig(void) {
     Modes.raw = 0;
     Modes.net = 0;
     Modes.net_only = 0;
+    Modes.net_output_json_port = MODES_NET_OUTPUT_JSON_PORT;
     Modes.net_output_baked_port = MODES_NET_OUTPUT_BAKED_PORT;
     Modes.net_output_sbs_port = MODES_NET_OUTPUT_SBS_PORT;
     Modes.net_output_raw_port = MODES_NET_OUTPUT_RAW_PORT;
@@ -353,6 +359,7 @@ void modesInit(void) {
     Modes.stat_http_requests = 0;
     Modes.stat_sbs_connections = 0;
     Modes.stat_baked_connections = 0;
+    Modes.stat_json_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
 }
@@ -1771,9 +1778,12 @@ void useModesMessage(struct modesMessage *mm, struct client *c) {
     if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
         /* Track aircrafts in interactive mode or if the HTTP
          * interface is enabled. */
-        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0 || Modes.stat_baked_connections > 0) {
+        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0 || Modes.stat_baked_connections > 0 || Modes.stat_json_connections > 0) {
             struct aircraft *a = interactiveReceiveData(mm,c);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
+
+            if (a && Modes.stat_json_connections > 0) modesSendJsonOutput(mm, a);  /* Feed json output clients. */
+
         }
         /* In non-interactive way, display messages on standard output. */
         if (!Modes.interactive && !Modes.quiet) {
@@ -2136,19 +2146,20 @@ void modesInitNet(void) {
         char *descr;
         int *socket;
         int port;
-    } services[5] = {
+    } services[6] = {
         {"Raw TCP output", &Modes.ros, Modes.net_output_raw_port},
         {"Raw TCP input", &Modes.ris, Modes.net_input_raw_port},
         {"HTTP server", &Modes.https, Modes.net_http_port},
         {"Basestation TCP output", &Modes.sbsos, Modes.net_output_sbs_port},
-        {"Baked TCP output", &Modes.bakedos, Modes.net_output_baked_port}
+        {"Baked TCP output", &Modes.bakedos, Modes.net_output_baked_port},
+        {"JSON TCP output", &Modes.jsonos, Modes.net_output_json_port}
     };
     int j;
 
     memset(Modes.clients,0,sizeof(Modes.clients));
     Modes.maxfd = -1;
 
-    for (j = 0; j < 5; j++) {
+    for (j = 0; j < 6; j++) {
         int s = anetTcpServer(Modes.aneterr, services[j].port, NULL);
         if (s == -1) {
             fprintf(stderr, "Error opening the listening port %d (%s): %s\n",
@@ -2169,13 +2180,14 @@ void modesAcceptClients(void) {
     int fd, port;
     unsigned int j;
     struct client *c;
-    int services[5];
+    int services[6];
 
     services[0] = Modes.ros;
     services[1] = Modes.ris;
     services[2] = Modes.https;
     services[3] = Modes.sbsos;
     services[4] = Modes.bakedos;
+    services[5] = Modes.jsonos;
 
     for (j = 0; j < sizeof(services)/sizeof(int); j++) {
         fd = anetTcpAccept(Modes.aneterr, services[j], NULL, &port);
@@ -2198,6 +2210,7 @@ void modesAcceptClients(void) {
         if (Modes.maxfd < fd) Modes.maxfd = fd;
         if (services[j] == Modes.sbsos) Modes.stat_sbs_connections++;
         if (services[j] == Modes.bakedos) Modes.stat_baked_connections++;
+        if (services[j] == Modes.jsonos) Modes.stat_json_connections++;
 
         j--; /* Try again with the same listening port. */
 
@@ -2241,6 +2254,42 @@ void modesSendAllClients(int service, void *msg, int len) {
             }
         }
     }
+}
+
+/* Write raw output to TCP clients. */
+void modesSendJsonOutput(struct modesMessage *mm, struct aircraft *a) {
+    char msg[256], *p = msg;
+
+    int altitude = a->altitude, speed = a->speed;
+
+    /* Convert units to metric if --metric was specified. */
+    if (Modes.metric) {
+        altitude /= 3.2828;
+        speed *= 1.852;
+    }
+
+    double lat = mm->raw_latitude;
+    double lon = mm->raw_longitude;
+    if (a->lat != 0 && a->lon != 0) {
+        lat = a->lat;
+        lon = a->lon;
+        //printf("Use lat/lon of aircraft: %f : %f\n", lat, lon);
+    }
+
+    if (lat != 0 && lon != 0) {
+        p += sprintf(p,
+            "{\"hex\":\"%s\", \"flight\":\"%s\", \"lat\":%f, "
+            "\"lon\":%f, \"altitude\":%d, \"track\":%d, "
+            "\"speed\":%d}\n",
+            a->hexaddr, a->flight, lat, lon, altitude, a->track,
+            speed);
+        //printf("JSON: %s\n", msg);
+    }
+    else {
+        printf("No position available for aircraft: %s\n", a->flight);
+    }
+
+    modesSendAllClients(Modes.jsonos, msg, p-msg);
 }
 
 /* Write raw output to TCP clients. */
@@ -2750,7 +2799,8 @@ void showHelp(void) {
 "--net                    Enable networking.\n"
 "--net-only               Enable just networking, no RTL device or file used.\n"
 "--net-ro-port <port>     TCP listening port for raw output (default: 30002).\n"
-"--net-baked-port <port>     TCP listening port for baked (key-value tsv) output (default: 30004).\n"
+"--net-json-port <port>   TCP listening port for json output (default: 30005).\n"
+"--net-baked-port <port>  TCP listening port for baked (key-value tsv) output (default: 30004).\n"
 "--net-ri-port <port>     TCP listening port for raw input (default: 30001).\n"
 "--net-http-port <port>   HTTP server port (default: 8080).\n"
 "--net-sbs-port <port>    TCP listening port for BaseStation format output (default: 30003).\n"
@@ -2829,6 +2879,8 @@ int main(int argc, char **argv) {
             Modes.net_only = 1;
         } else if (!strcmp(argv[j],"--net-ro-port") && more) {
             Modes.net_output_raw_port = atoi(argv[++j]);
+        } else if (!strcmp(argv[j],"--net-json-port") && more) {
+            Modes.net_output_json_port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-baked-port") && more) {
             Modes.net_output_baked_port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-ri-port") && more) {
